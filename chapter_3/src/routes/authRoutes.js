@@ -5,8 +5,45 @@ import db from '../db.js'
 
 const router = express.Router()
 
-router.post('/register', (req, res) => {})
+router.post('/register', (req, res) => {
+  const { username, password } = req.body
+  // save the username and an irreversibly encrypted password
+  // save gilgamesh@gmail.com | asdlkfa;sdkl....asdskflkdj.s...jkdslkj//jsja
 
-router.post('/login', (req, res) => {})
+  // encrypt the password
+  const hashedPassword = bcrypt.hashSync(password, 8) // word and salt
+
+  // save the new user and hashed password to the db
+  try {
+    const insertUser = db.prepare(`
+      INSERT INTO users (username, password)
+      VALUES (?, ?)
+    `)
+    const result = insertUser.run(username, hashedPassword)
+
+    // now that we have a user, i want to add their first todo for them
+    const defaultTodo = `Hello :) Add your first todo!`
+    const insertTodo = db.prepare(`
+      INSERT INTO todos (user_id, task)
+      VALUES (? , ?)
+    `)
+    insertTodo.run(result.lastInsertRowid, defaultTodo)
+
+    // create a token
+    const token = jwt.sign({ id: result.lastInsertRowid }, process.env.JWT_SECRET, {
+      expiresIn: '24h',
+    })
+    res.json({ token })
+  } catch (err) {
+    console.log(err.message)
+    res.sendStatus(503)
+  }
+})
+
+router.post('/login', (req, res) => {
+  // we get their email, and we look up the password associated with that email in the db
+  // but we get it back and see it's encrypted, which means that we cannot compare it to the one the user just used trying to login
+  // so we can again one way encrypt the password the user just entered
+})
 
 export default router
