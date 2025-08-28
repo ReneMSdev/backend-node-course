@@ -28,24 +28,32 @@ router.post('/', async (req, res) => {
 })
 
 // Update a todo
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const { completed } = req.body
   const { id } = req.params
-  const { page } = req.query
 
-  const updatedTodo = db.prepare('UPDATE todos SET completed = ? WHERE id = ?')
-  updatedTodo.run(completed, id)
-
-  res.json({ message: 'Todo completed' })
+  const updatedTodo = await prisma.todo.update({
+    where: {
+      id: parseInt(id),
+      userId: req.userId,
+    },
+    data: {
+      completed: !!completed,
+    },
+  })
+  res.json(updatedTodo)
 })
 
 // Delete a todo
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const { id } = req.params
   const userId = req.userId
-  const deleteTodo = db.prepare(`DELETE FROM todos WHERE id = ? AND user_id = ?`)
-  deleteTodo.run(id, userId)
-
+  await prisma.todo.delete({
+    where: {
+      id: parseInt(id),
+      userId,
+    },
+  })
   res.send({ message: 'Todo deleted' })
 })
 
